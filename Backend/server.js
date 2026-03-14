@@ -21,6 +21,10 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/budgets", budgetRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/reports", reportRoutes);
+app.use(cors({
+  origin: "https://your-vercel-url.vercel.app",
+  credentials: true,
+}));
 
 
 app.get("/", (req, res) => {
