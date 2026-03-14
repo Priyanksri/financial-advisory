@@ -23,6 +23,10 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/reports", reportRoutes);
 
 
+app.get("/", (req, res) => {
+  res.send("Finance Dashboard API is running!");
+});
+
 app.listen(PORT, () => {
     connectDB();
     console.log(`Server is running on port ${PORT}`);
