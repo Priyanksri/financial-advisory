@@ -1,4 +1,4 @@
-import puppeteer from "puppeteer";
+import htmlPdf from "html-pdf-node";
 import Transaction from "../models/Transaction.js";
 import Budget from "../models/Budget.js";
 
@@ -56,19 +56,18 @@ export const generatePDFReport = async (req, res) => {
         </head>
         <body>
           <h1>💰 Finance Report — ${month}/${year}</h1>
-
           <div class="summary">
             <div class="card">
               <h3>Total Income</h3>
-              <p class="income">$${totalIncome.toLocaleString()}</p>
+              <p class="income">₹${totalIncome.toLocaleString()}</p>
             </div>
             <div class="card">
               <h3>Total Expenses</h3>
-              <p class="expense">$${totalExpenses.toLocaleString()}</p>
+              <p class="expense">₹${totalExpenses.toLocaleString()}</p>
             </div>
             <div class="card">
               <h3>Savings</h3>
-              <p class="savings">$${savings.toLocaleString()}</p>
+              <p class="savings">₹${savings.toLocaleString()}</p>
             </div>
           </div>
 
@@ -81,21 +80,17 @@ export const generatePDFReport = async (req, res) => {
               <th>Description</th>
               <th>Amount</th>
             </tr>
-            ${transactions
-              .map(
-                (t) => `
+            ${transactions.map((t) => `
               <tr>
                 <td>${new Date(t.date).toLocaleDateString()}</td>
                 <td>${t.type}</td>
                 <td>${t.category}</td>
                 <td>${t.description || "-"}</td>
                 <td style="color: ${t.type === "income" ? "#10b981" : "#ef4444"}">
-                  ${t.type === "income" ? "+" : "-"}$${t.amount.toLocaleString()}
+                  ${t.type === "income" ? "+" : "-"}₹${t.amount.toLocaleString()}
                 </td>
               </tr>
-            `
-              )
-              .join("")}
+            `).join("")}
           </table>
 
           <h2>🎯 Budget vs Actual</h2>
@@ -106,24 +101,20 @@ export const generatePDFReport = async (req, res) => {
               <th>Actual Spent</th>
               <th>Status</th>
             </tr>
-            ${budgets
-              .map((b) => {
-                const actual = transactions
-                  .filter(
-                    (t) => t.category === b.category && t.type === "expense"
-                  )
-                  .reduce((sum, t) => sum + t.amount, 0);
-                const status = actual > b.amount ? "⚠️ Over Budget" : "✅ On Track";
-                return `
+            ${budgets.map((b) => {
+              const actual = transactions
+                .filter((t) => t.category === b.category && t.type === "expense")
+                .reduce((sum, t) => sum + t.amount, 0);
+              const status = actual > b.amount ? "Over Budget" : "On Track";
+              return `
                 <tr>
                   <td>${b.category}</td>
-                  <td>$${b.amount.toLocaleString()}</td>
-                  <td>$${actual.toLocaleString()}</td>
+                  <td>₹${b.amount.toLocaleString()}</td>
+                  <td>₹${actual.toLocaleString()}</td>
                   <td>${status}</td>
                 </tr>
               `;
-              })
-              .join("")}
+            }).join("")}
           </table>
 
           <div class="footer">
@@ -133,33 +124,18 @@ export const generatePDFReport = async (req, res) => {
       </html>
     `;
 
-    const browser = await puppeteer.launch({
-      headless: "new",
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-      ],
+    const file = { content: html };
+    const options = { format: "A4" };
+
+    htmlPdf.generatePdf(file, options).then((pdfBuffer) => {
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=finance-report-${month}-${year}.pdf`
+      );
+      res.send(pdfBuffer);
     });
 
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "domcontentloaded" }); // ← fixed here
-    
-    const pdf = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20px", bottom: "20px", left: "20px", right: "20px" },
-    });
-
-    await browser.close();
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=finance-report-${month}-${year}.pdf`
-    );
-    res.send(pdf);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
