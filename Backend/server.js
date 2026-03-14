@@ -22,7 +22,7 @@ app.use("/api/budgets", budgetRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/reports", reportRoutes);
 app.use(cors({
-  origin: "https://your-vercel-url.vercel.app",
+  origin: "https://financial-advisory-fi9ba3wke-priyanksris-projects.vercel.app/",
   credentials: true,
 }));
 
